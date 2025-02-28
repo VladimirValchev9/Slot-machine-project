@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Log In</title>
+    <!-- <link rel="stylesheet" href="/styles/styles.css"> -->
+
+    <script>
+        async function loginUser(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            try{
+                const response = await fetch("/login", {
+                    method: "post",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({username, password}),
+                    credentials: "include"
+                });
+
+                const data = await response.json();
+                alert(data.message);
+
+                if(response.ok){
+                    localStorage.setItem("balance", data.amount);
+                    window.location.href = "/";
+                }
+            } catch(error){
+                alert("Login failed");
+            }
+        }
+    </script>
+
+</head>
+<body>
+    <h1>Login</h1>  
+    <form onsubmit="loginUser(event)">
+        <div>
+            <label for="username">Username</label>
+            <input id="username" type="text" name="username" required>
+        </div>
+        <div>
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password" required>
+        </div>
+        <button type="submit">Enter</button>
+    </form>
+    <h3>Don't have an account?</h3>
+    <a href="/register">Register now</a>
+    
+</body>
+</html>

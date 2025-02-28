@@ -1,8 +1,4 @@
-const express = require('express')
-const port = 4200;
-
-const app = express();
-app.set('view engine', 'ejs');
+const fs = require('fs');
 
 let balance = 100;
 const bet = 1;
@@ -75,7 +71,7 @@ const flipGeneratedSymbols = (reels) => {
 }
 
 const parseFlipped = (newReels) => {
-    return newReels.map(reel => reel.join(' | ')).join('\n');
+    return newReels.map(reel => reel.join('   ')).join('\n');
 }
 
 const checkForWin = (newReels) => {
@@ -99,7 +95,7 @@ const checkForWin = (newReels) => {
 }
 
 const winMessage = (moneyWon) => {
-    if(moneyWon > 0) return "You won " +moneyWon;
+    if(moneyWon > 0) return "You won " + moneyWon;
     return "You didn't win";
 }
 
@@ -107,44 +103,31 @@ const addWinnings = (balance, moneyWon) => {
     return balance + (moneyWon*bet) - bet;
 }
 
-const game = () => {
-    const balMes = balanceMessage(balance);
+const history = [];
+
+const game = (username) => {
+    const users = JSON.parse(fs.readFileSync("users.json"));
+    let userIndex = users.findIndex(u => u.username === username);
+
+    if(userIndex === -1) return {balMes: "User not found", parsed: "", winMess: ""};
+
+    let user = users[userIndex];
+
+    if(user.amount <=0 ) return {balMes: "You ran out of money", result: "", winMess: ""}
+
+    const balMes = balanceMessage(user.amount);
     const generated = generateSymbols();
     const flipped = flipGeneratedSymbols(generated);
     const parsed = parseFlipped(flipped);
     const check = checkForWin(flipped);
     const winMess = winMessage(check);
-    balance = addWinnings(balance, check);
+    user.amount = user.amount + (check*bet) - bet;
 
-    return { balMes, parsed, winMess, balance };
+    fs.writeFileSync("users.json", JSON.stringify(users, null, 2));
+
+    history.push({time: new Date().toLocaleString(), amount: check});
+
+    return { balMes: `Current balance: ${user.amount}`, parsed, winMess };
 }
 
-app.get("/", (req,res)=>{
-    const balMes = balanceMessage(balance);
-    res.render("index", {
-        balMes : balMes,
-        result: "",
-        winMess: ""
-    });
-});
-
-app.post("/", (req,res)=>{
-    if(balance <= 0){
-        res.render("index", {
-            balMes : 'You ran out of money',
-            result: "",
-            winMess: ""
-        })
-        return;
-    }
-    const {balMes, parsed, winMess} = game();
-    res.render("index", {
-        balMes : balMes,
-        result: parsed,
-        winMess: winMess
-    })
-})
-
-app.listen(port, ()=>{
-    console.log("Server is listening on " + port);
-})
+module.exports = {game, balanceMessage, getBalance: () => balance, history}

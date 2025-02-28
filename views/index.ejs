@@ -3,15 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Game</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <link rel="stylesheet" href="/styles/styles.css">
+
+    <script>
+        async function checkAuth() {
+            try{
+                const response = await fetch("/protected", {
+                    method: "get",
+                    headers: {
+                        "Authorization": `Bearer ${getCookie('accessToken')}`
+                    },
+                    credentials: "include"
+                });
+
+                if(!response.ok){
+                    throw new Error("Unauthorised");
+                }
+                return;
+            } catch (error){
+                await refreshToken();
+            }
+        }
+
+        async function refreshToken() {
+            try{
+                const response = await fetch("/refresh", { 
+                    method: "post",
+                    credentials: "include"
+                })
+                const data = await response.json();
+
+                if(response.ok){
+                    checkAuth();
+                }
+                else{
+                    alert("Session expired, log in again");
+                    window.location.href = "/login";
+                }
+            } catch(error){
+                alert("Error refreshing token");
+                window.location.href = "/login";
+            }
+        }
+
+        function getCookie(name){
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if(parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
+
+        function logout(){
+            localStorage.clear();
+            fetch ("/logout", {
+                method: "post",
+                credentials:"include"
+            }).then(()=>window.location.href="/login");
+        }
+
+        window.onload= checkAuth;
+
+        document.addEventListener("keydown", function(event) {
+            if (event.code === "Space") {
+                event.preventDefault();
+                document.getElementById("spinBtn").click();
+            }
+        });
+    </script>
 </head>
 <body>
-    <h1>Slot Machine Game</h1>
-    <h2><%= balMes %></h2>
-    <pre><%= result %></pre>
-    <h3><%= winMess %></h3>
-    <form action="/" method="post">
-        <button>Spin</button>
-    </form>
+
+    <div class="container">
+        <h1>Slot Machine Game</h1>
+        <h2 id="bal"><%= balMes %></h2>
+        <pre id="res"><%= result %></pre>
+        <h3 id="winMes"><%= winMess %></h3>
+        
+        <form action="/" method="post">
+            <button id="spinBtn">Spin</button>
+        </form>
+        
+        <form action="/history" method="get">
+            <button id="historyBtn">History</button>
+        </form>
+        
+        <button onclick="logout()">Log Out</button>
+    </div>
 </body>
 </html>
